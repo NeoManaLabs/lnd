@@ -110,7 +110,7 @@ TEST_FLAGS += -test.count=1
 endif
 
 GOLIST := go list -tags="$(DEV_TAGS)" -deps $(PKG)/... | grep '$(PKG)'| grep -v '/vendor/'
-GOLISTCOVER := $(shell go list -tags="$(DEV_TAGS)" -deps -f '{{.ImportPath}}' ./... | grep '$(PKG)' | sed -e 's/^$(ESCPKG)/./')
+GOLISTCOVER := $(shell go list -tags="$(DEV_TAGS)" -deps -f '{{.ImportPath}}' ./... | grep '$(PKG)' | sed -e "s/^$(ESCPKG)/./")
 
 # UNIT_TARGTED is undefined iff a specific package and/or unit test case is
 # not being targeted.

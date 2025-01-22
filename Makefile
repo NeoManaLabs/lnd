@@ -21,10 +21,10 @@ IOS_BUILD := $(IOS_BUILD_DIR)/Lndmobile.xcframework
 ANDROID_BUILD_DIR := $(MOBILE_BUILD_DIR)/android
 ANDROID_BUILD := $(ANDROID_BUILD_DIR)/Lndmobile.aar
 
-COMMIT := $(shell git describe --tags --dirty)
+COMMIT := $(shell git describe --tags --dirty --always)
 
 # Determine the minor version of the active Go installation.
-ACTIVE_GO_VERSION := $(shell go version | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+ACTIVE_GO_VERSION := $(shell go version | sed -nre "s/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p")
 ACTIVE_GO_VERSION_MINOR := $(shell echo $(ACTIVE_GO_VERSION) | cut -d. -f2)
 
 LOOPVARFIX :=
@@ -38,7 +38,7 @@ endif
 GO_VERSION = 1.22.6
 
 GOBUILD := $(LOOPVARFIX) go build -v
-GOINSTALL := $(LOOPVARFIX) go install -v
+GOINSTALL := go install -v
 GOTEST := $(LOOPVARFIX) go test
 
 GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -name "*pb.go" -not -name "*pb.gw.go" -not -name "*.pb.json.go")
@@ -78,10 +78,8 @@ DOCKER_TOOLS = docker run \
   -v $(shell bash -c "mkdir -p /tmp/go-lint-cache; echo /tmp/go-lint-cache"):/root/.cache/golangci-lint \
   -v $$(pwd):/build lnd-tools
 
-GREEN := "\\033[0;32m"
-NC := "\\033[0m"
 define print
-	echo $(GREEN)$1$(NC)
+	echo $1
 endef
 
 default: scratch
@@ -153,8 +151,8 @@ install-all: install manpages
 #? release-install: Build and install lnd and lncli release binaries, place them in $GOPATH/bin
 release-install:
 	@$(call print, "Installing release lnd and lncli.")
-	env CGO_ENABLED=0 $(GOINSTALL) -v -trimpath -ldflags="$(RELEASE_LDFLAGS)" -tags="$(RELEASE_TAGS)" $(PKG)/cmd/lnd
-	env CGO_ENABLED=0 $(GOINSTALL) -v -trimpath -ldflags="$(RELEASE_LDFLAGS)" -tags="$(RELEASE_TAGS)" $(PKG)/cmd/lncli
+	$(GOINSTALL) -v -trimpath -ldflags="$(RELEASE_LDFLAGS)" -tags="$(RELEASE_TAGS)" $(PKG)/cmd/lnd
+	$(GOINSTALL) -v -trimpath -ldflags="$(RELEASE_LDFLAGS)" -tags="$(RELEASE_TAGS)" $(PKG)/cmd/lncli
 
 #? release: Build the full set of reproducible release binaries for all supported platforms
 # Make sure the generated mobile RPC stubs don't influence our vendor package
