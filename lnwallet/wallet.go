@@ -23,7 +23,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -733,7 +733,7 @@ func (l *LightningWallet) RegisterFundingIntent(expectedID [32]byte,
 	}
 
 	if _, ok := l.fundingIntents[expectedID]; ok {
-		return fmt.Errorf("%w: already has intent registered: %v",
+		return fmt.Errorf("%w: already has intent registered: %x",
 			ErrDuplicatePendingChanID, expectedID[:])
 	}
 
@@ -2476,13 +2476,13 @@ func (l *LightningWallet) handleSingleFunderSigs(req *addSingleFunderSigsMsg) {
 		fundingTxOut         *wire.TxOut
 	)
 	if chanType.IsTaproot() {
-		//nolint:lll
+		//nolint:ll
 		fundingWitnessScript, fundingTxOut, err = input.GenTaprootFundingScript(
 			ourKey.PubKey, theirKey.PubKey, channelValue,
 			pendingReservation.partialState.TapscriptRoot,
 		)
 	} else {
-		//nolint:lll
+		//nolint:ll
 		fundingWitnessScript, fundingTxOut, err = input.GenFundingPkScript(
 			ourKey.PubKey.SerializeCompressed(),
 			theirKey.PubKey.SerializeCompressed(), channelValue,

@@ -14,7 +14,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -129,8 +129,8 @@ func TestMaybeMatchScript(t *testing.T) {
 			t.Parallel()
 
 			err := validateShutdownScript(
-				func() error { return nil }, test.upfrontScript,
-				test.shutdownScript, &chaincfg.SimNetParams,
+				test.upfrontScript, test.shutdownScript,
+				&chaincfg.SimNetParams,
 			)
 
 			if err != test.expectedErr {
@@ -189,7 +189,7 @@ func (m *mockChannel) RemoteUpfrontShutdownScript() lnwire.DeliveryAddress {
 
 func (m *mockChannel) CreateCloseProposal(fee btcutil.Amount,
 	localScript, remoteScript []byte,
-	_ ...lnwallet.ChanCloseOpt) (input.Signature, *chainhash.Hash,
+	_ ...lnwallet.ChanCloseOpt) (input.Signature, *wire.MsgTx,
 	btcutil.Amount, error) {
 
 	if m.chanType.IsTaproot() {

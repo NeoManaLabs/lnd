@@ -15,7 +15,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	graphdb "github.com/lightningnetwork/lnd/graph/db"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/labels"
@@ -555,7 +555,7 @@ func (u *UtxoNursery) NurseryReport(
 				// confirmation of the commitment transaction.
 				switch kid.WitnessType() {
 
-				//nolint:lll
+				//nolint:ll
 				case input.TaprootHtlcAcceptedSuccessSecondLevel:
 					fallthrough
 				case input.HtlcAcceptedSuccessSecondLevel:
@@ -590,7 +590,7 @@ func (u *UtxoNursery) NurseryReport(
 					// it.
 					report.AddLimboDirectHtlc(&kid)
 
-				//nolint:lll
+				//nolint:ll
 				case input.TaprootHtlcAcceptedSuccessSecondLevel:
 					fallthrough
 				case input.TaprootHtlcOfferedTimeoutSecondLevel:
@@ -611,7 +611,7 @@ func (u *UtxoNursery) NurseryReport(
 				// balance.
 				switch kid.WitnessType() {
 
-				//nolint:lll
+				//nolint:ll
 				case input.TaprootHtlcAcceptedSuccessSecondLevel:
 					fallthrough
 				case input.TaprootHtlcOfferedTimeoutSecondLevel:
@@ -794,7 +794,7 @@ func (u *UtxoNursery) graduateClass(classHeight uint32) error {
 		return err
 	}
 
-	utxnLog.Infof("Attempting to graduate height=%v: num_kids=%v, "+
+	utxnLog.Debugf("Attempting to graduate height=%v: num_kids=%v, "+
 		"num_babies=%v", classHeight, len(kgtnOutputs), len(cribOutputs))
 
 	// Offer the outputs to the sweeper and set up notifications that will

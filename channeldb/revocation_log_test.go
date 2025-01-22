@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcutil"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/kvdb"
 	"github.com/lightningnetwork/lnd/lntest/channels"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -565,7 +565,7 @@ func TestPutRevocationLog(t *testing.T) {
 		},
 		{
 			// Test dust htlc is not saved.
-			name:        "dust htlc not saved with amout data",
+			name:        "dust htlc not saved with amount data",
 			commit:      testCommitDust,
 			ourIndex:    0,
 			theirIndex:  1,

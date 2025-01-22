@@ -19,7 +19,7 @@ import (
 	"github.com/lightningnetwork/lnd/batch"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph"
 	graphdb "github.com/lightningnetwork/lnd/graph/db"
 	"github.com/lightningnetwork/lnd/graph/db/models"
@@ -526,7 +526,7 @@ func New(cfg Config, selfKeyDesc *keychain.KeyDescriptor) *AuthenticatedGossiper
 		futureMsgs:        newFutureMsgCache(maxFutureMessages),
 		quit:              make(chan struct{}),
 		chanPolicyUpdates: make(chan *chanPolicyUpdateRequest),
-		prematureChannelUpdates: lru.NewCache[uint64, *cachedNetworkMsg]( //nolint: lll
+		prematureChannelUpdates: lru.NewCache[uint64, *cachedNetworkMsg]( //nolint: ll
 			maxPrematureUpdates,
 		),
 		channelMtx: multimutex.NewMutex[uint64](),

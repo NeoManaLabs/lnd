@@ -12,7 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/labels"
@@ -539,8 +539,8 @@ func (c *ChanCloser) AuxOutputs() fn.Option[AuxCloseOutputs] {
 // upfront script is set, we check whether it matches the script provided by
 // our peer. If they do not match, we use the disconnect function provided to
 // disconnect from the peer.
-func validateShutdownScript(disconnect func() error, upfrontScript,
-	peerScript lnwire.DeliveryAddress, netParams *chaincfg.Params) error {
+func validateShutdownScript(upfrontScript, peerScript lnwire.DeliveryAddress,
+	netParams *chaincfg.Params) error {
 
 	// Either way, we'll make sure that the script passed meets our
 	// standards. The upfrontScript should have already been checked at an
@@ -567,12 +567,6 @@ func validateShutdownScript(disconnect func() error, upfrontScript,
 	if !bytes.Equal(upfrontScript, peerScript) {
 		chancloserLog.Warnf("peer's script: %x does not match upfront "+
 			"shutdown script: %x", peerScript, upfrontScript)
-
-		// Disconnect from the peer because they have violated option upfront
-		// shutdown.
-		if err := disconnect(); err != nil {
-			return err
-		}
 
 		return ErrUpfrontShutdownScriptMismatch
 	}
@@ -630,7 +624,6 @@ func (c *ChanCloser) ReceiveShutdown(msg lnwire.Shutdown) (
 		// If the remote node opened the channel with option upfront
 		// shutdown script, check that the script they provided matches.
 		if err := validateShutdownScript(
-			c.cfg.Disconnect,
 			c.cfg.Channel.RemoteUpfrontShutdownScript(),
 			msg.Address, c.cfg.ChainParams,
 		); err != nil {
@@ -681,7 +674,6 @@ func (c *ChanCloser) ReceiveShutdown(msg lnwire.Shutdown) (
 		// If the remote node opened the channel with option upfront
 		// shutdown script, check that the script they provided matches.
 		if err := validateShutdownScript(
-			c.cfg.Disconnect,
 			c.cfg.Channel.RemoteUpfrontShutdownScript(),
 			msg.Address, c.cfg.ChainParams,
 		); err != nil {
@@ -917,7 +909,7 @@ func (c *ChanCloser) ReceiveClosingSigned( //nolint:funlen
 		)
 		matchingSig := c.priorFeeOffers[remoteProposedFee]
 		if c.cfg.Channel.ChanType().IsTaproot() {
-			localWireSig, err := matchingSig.PartialSig.UnwrapOrErrV( //nolint:lll
+			localWireSig, err := matchingSig.PartialSig.UnwrapOrErrV( //nolint:ll
 				fmt.Errorf("none local sig"),
 			)
 			if err != nil {
@@ -931,7 +923,7 @@ func (c *ChanCloser) ReceiveClosingSigned( //nolint:funlen
 			}
 
 			muSession := c.cfg.MusigSession
-			localSig, remoteSig, closeOpts, err = muSession.CombineClosingOpts( //nolint:lll
+			localSig, remoteSig, closeOpts, err = muSession.CombineClosingOpts( //nolint:ll
 				localWireSig, remoteWireSig,
 			)
 			if err != nil {
@@ -981,7 +973,7 @@ func (c *ChanCloser) ReceiveClosingSigned( //nolint:funlen
 		err = fn.MapOptionZ(
 			c.cfg.AuxCloser, func(aux AuxChanCloser) error {
 				channel := c.cfg.Channel
-				//nolint:lll
+				//nolint:ll
 				req := AuxShutdownReq{
 					ChanPoint:   c.chanPoint,
 					ShortChanID: c.cfg.Channel.ShortChanID(),

@@ -1127,10 +1127,10 @@ func (c *ChannelGraph) addChannelEdge(tx kvdb.RwTx,
 		err := addLightningNode(tx, &node1Shell)
 		if err != nil {
 			return fmt.Errorf("unable to create shell node "+
-				"for: %x", edge.NodeKey1Bytes)
+				"for: %x: %w", edge.NodeKey1Bytes, err)
 		}
 	case node1Err != nil:
-		return err
+		return node1Err
 	}
 
 	_, node2Err := fetchLightningNode(nodes, edge.NodeKey2Bytes[:])
@@ -1143,10 +1143,10 @@ func (c *ChannelGraph) addChannelEdge(tx kvdb.RwTx,
 		err := addLightningNode(tx, &node2Shell)
 		if err != nil {
 			return fmt.Errorf("unable to create shell node "+
-				"for: %x", edge.NodeKey2Bytes)
+				"for: %x: %w", edge.NodeKey2Bytes, err)
 		}
 	case node2Err != nil:
-		return err
+		return node2Err
 	}
 
 	// If the edge hasn't been created yet, then we'll first add it to the
@@ -1658,7 +1658,7 @@ func (c *ChannelGraph) DisconnectBlockAtHeight(height uint32) (
 		var keys [][]byte
 		cursor := edgeIndex.ReadWriteCursor()
 
-		//nolint:lll
+		//nolint:ll
 		for k, v := cursor.Seek(chanIDStart[:]); k != nil &&
 			bytes.Compare(k, chanIDEnd[:]) < 0; k, v = cursor.Next() {
 			edgeInfoReader := bytes.NewReader(v)
@@ -1705,7 +1705,7 @@ func (c *ChannelGraph) DisconnectBlockAtHeight(height uint32) (
 		// the keys in a second loop.
 		var pruneKeys [][]byte
 		pruneCursor := pruneBucket.ReadWriteCursor()
-		//nolint:lll
+		//nolint:ll
 		for k, _ := pruneCursor.Seek(pruneKeyStart[:]); k != nil &&
 			bytes.Compare(k, pruneKeyEnd[:]) <= 0; k, _ = pruneCursor.Next() {
 			pruneKeys = append(pruneKeys, k)
@@ -2004,7 +2004,7 @@ func (c *ChannelGraph) ChanUpdatesInHorizon(startTime,
 		// the index collecting the info and policy of each update of
 		// each channel that has a last update within the time range.
 		//
-		//nolint:lll
+		//nolint:ll
 		for indexKey, _ := updateCursor.Seek(startTimeBytes[:]); indexKey != nil &&
 			bytes.Compare(indexKey, endTimeBytes[:]) <= 0; indexKey, _ = updateCursor.Next() {
 
@@ -2139,7 +2139,7 @@ func (c *ChannelGraph) NodeUpdatesInHorizon(startTime,
 		// the index collecting info for each node within the time
 		// range.
 		//
-		//nolint:lll
+		//nolint:ll
 		for indexKey, _ := updateCursor.Seek(startTimeBytes[:]); indexKey != nil &&
 			bytes.Compare(indexKey, endTimeBytes[:]) <= 0; indexKey, _ = updateCursor.Next() {
 
@@ -2377,7 +2377,7 @@ func (c *ChannelGraph) FilterChannelRange(startHeight,
 		// We'll now iterate through the database, and find each
 		// channel ID that resides within the specified range.
 		//
-		//nolint:lll
+		//nolint:ll
 		for k, v := cursor.Seek(chanIDStart[:]); k != nil &&
 			bytes.Compare(k, chanIDEnd[:]) <= 0; k, v = cursor.Next() {
 			// Don't send alias SCIDs during gossip sync.
@@ -2692,8 +2692,14 @@ func (c *ChannelGraph) delChannelEdgeUnsafe(edges, edgeIndex, chanIndex,
 	// As part of deleting the edge we also remove all disabled entries
 	// from the edgePolicyDisabledIndex bucket. We do that for both
 	// directions.
-	updateEdgePolicyDisabledIndex(edges, cid, false, false)
-	updateEdgePolicyDisabledIndex(edges, cid, true, false)
+	err = updateEdgePolicyDisabledIndex(edges, cid, false, false)
+	if err != nil {
+		return err
+	}
+	err = updateEdgePolicyDisabledIndex(edges, cid, true, false)
+	if err != nil {
+		return err
+	}
 
 	// With the edge data deleted, we can purge the information from the two
 	// edge indexes.
@@ -3163,7 +3169,7 @@ func nodeTraversal(tx kvdb.RTx, nodePub []byte, db kvdb.Backend,
 		// as its prefix. This indicates that we've stepped over into
 		// another node's edges, so we can terminate our scan.
 		edgeCursor := edges.ReadCursor()
-		for nodeEdge, _ := edgeCursor.Seek(nodeStart[:]); bytes.HasPrefix(nodeEdge, nodePub); nodeEdge, _ = edgeCursor.Next() { //nolint:lll
+		for nodeEdge, _ := edgeCursor.Seek(nodeStart[:]); bytes.HasPrefix(nodeEdge, nodePub); nodeEdge, _ = edgeCursor.Next() { //nolint:ll
 			// If the prefix still matches, the channel id is
 			// returned in nodeEdge. Channel id is used to lookup
 			// the node at the other end of the channel and both
@@ -4410,11 +4416,14 @@ func putChanEdgePolicy(edges kvdb.RwBucket, edge *models.ChannelEdgePolicy,
 		return err
 	}
 
-	updateEdgePolicyDisabledIndex(
+	err = updateEdgePolicyDisabledIndex(
 		edges, edge.ChannelID,
 		edge.ChannelFlags&lnwire.ChanUpdateDirection > 0,
 		edge.IsDisabled(),
 	)
+	if err != nil {
+		return err
+	}
 
 	return edges.Put(edgeKey[:], b.Bytes()[:])
 }

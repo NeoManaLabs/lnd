@@ -19,25 +19,20 @@ func testMaxHtlcPathfind(ht *lntest.HarnessTest) {
 	// Bob to add a maximum of 5 htlcs to her commitment.
 	maxHtlcs := 5
 
-	alice, bob := ht.Alice, ht.Bob
-
-	// Restart nodes with the new flag so they understand the new payment
+	// Create nodes with the new flag so they understand the new payment
 	// status.
-	ht.RestartNodeWithExtraArgs(alice, []string{
-		"--routerrpc.usestatusinitiated",
-	})
-	ht.RestartNodeWithExtraArgs(bob, []string{
-		"--routerrpc.usestatusinitiated",
-	})
+	cfg := []string{"--routerrpc.usestatusinitiated"}
+	cfgs := [][]string{cfg, cfg}
 
-	ht.EnsureConnected(alice, bob)
-	chanPoint := ht.OpenChannel(
-		alice, bob, lntest.OpenChannelParams{
+	// Create a channel Alice->Bob.
+	_, nodes := ht.CreateSimpleNetwork(
+		cfgs, lntest.OpenChannelParams{
 			Amt:            1000000,
 			PushAmt:        800000,
 			RemoteMaxHtlcs: uint16(maxHtlcs),
 		},
 	)
+	alice, bob := nodes[0], nodes[1]
 
 	// Alice and bob should have one channel open with each other now.
 	ht.AssertNodeNumChannels(alice, 1)
@@ -82,8 +77,6 @@ func testMaxHtlcPathfind(ht *lntest.HarnessTest) {
 
 	ht.AssertNumActiveHtlcs(alice, 0)
 	ht.AssertNumActiveHtlcs(bob, 0)
-
-	ht.CloseChannel(alice, chanPoint)
 }
 
 type holdSubscription struct {
@@ -114,7 +107,7 @@ func (h *holdSubscription) cancel(ht *lntest.HarnessTest) {
 	)
 	require.Equal(ht, lnrpc.Payment_FAILED, payUpdate.Status,
 		"expected payment failed")
-	require.Equal(ht, lnrpc.PaymentFailureReason_FAILURE_REASON_INCORRECT_PAYMENT_DETAILS, //nolint:lll
+	require.Equal(ht, lnrpc.PaymentFailureReason_FAILURE_REASON_INCORRECT_PAYMENT_DETAILS, //nolint:ll
 		payUpdate.FailureReason, "expected unknown details")
 }
 

@@ -17,7 +17,7 @@ import (
 	"github.com/btcsuite/btcwallet/chain"
 	"github.com/lightningnetwork/lnd/blockcache"
 	"github.com/lightningnetwork/lnd/chainntnfs"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/queue"
 )
 
@@ -366,7 +366,7 @@ out:
 				// TODO(wilmer): add retry logic if rescan fails?
 				b.wg.Add(1)
 
-				//nolint:lll
+				//nolint:ll
 				go func(msg *chainntnfs.HistoricalConfDispatch) {
 					defer b.wg.Done()
 
@@ -539,7 +539,7 @@ out:
 func (b *BtcdNotifier) handleRelevantTx(tx *btcutil.Tx,
 	mempool bool, height uint32) {
 
-	// If this is a mempool spend, we'll ask the mempool notifier to hanlde
+	// If this is a mempool spend, we'll ask the mempool notifier to handle
 	// it.
 	if mempool {
 		err := b.memNotifier.ProcessRelevantSpendTx(tx)

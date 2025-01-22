@@ -10,7 +10,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-errors/errors"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/tlv"
 )
 
@@ -81,7 +81,7 @@ const (
 	CodeExpiryTooFar                     FailCode = 21
 	CodeInvalidOnionPayload                       = FlagPerm | 22
 	CodeMPPTimeout                       FailCode = 23
-	CodeInvalidBlinding                           = FlagBadOnion | FlagPerm | 24 //nolint:lll
+	CodeInvalidBlinding                           = FlagBadOnion | FlagPerm | 24 //nolint:ll
 )
 
 // String returns the string representation of the failure code.

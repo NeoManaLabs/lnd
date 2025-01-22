@@ -10,7 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	sphinx "github.com/lightningnetwork/lightning-onion"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -189,10 +189,21 @@ func (p *paymentLifecycle) resumePayment(ctx context.Context) ([32]byte,
 		p.resultCollector(&a)
 	}
 
+	// Get the payment status.
+	status := payment.GetStatus()
+
 	// exitWithErr is a helper closure that logs and returns an error.
 	exitWithErr := func(err error) ([32]byte, *route.Route, error) {
-		log.Errorf("Payment %v with status=%v failed: %v",
-			p.identifier, payment.GetStatus(), err)
+		// Log an error with the latest payment status.
+		//
+		// NOTE: this `status` variable is reassigned in the loop
+		// below. We could also call `payment.GetStatus` here, but in a
+		// rare case when the critical log is triggered when using
+		// postgres as db backend, the `payment` could be nil, causing
+		// the payment fetching to return an error.
+		log.Errorf("Payment %v with status=%v failed: %v", p.identifier,
+			status, err)
+
 		return [32]byte{}, nil, err
 	}
 
@@ -213,10 +224,10 @@ lifecycle:
 		ps := payment.GetState()
 		remainingFees := p.calcFeeBudget(ps.FeesPaid)
 
+		status = payment.GetStatus()
 		log.Debugf("Payment %v: status=%v, active_shards=%v, "+
-			"rem_value=%v, fee_limit=%v", p.identifier,
-			payment.GetStatus(), ps.NumAttemptsInFlight,
-			ps.RemainingAmt, remainingFees)
+			"rem_value=%v, fee_limit=%v", p.identifier, status,
+			ps.NumAttemptsInFlight, ps.RemainingAmt, remainingFees)
 
 		// We now proceed our lifecycle with the following tasks in
 		// order,
@@ -337,7 +348,7 @@ func (p *paymentLifecycle) checkContext(ctx context.Context) error {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			reason = channeldb.FailureReasonTimeout
 			log.Warnf("Payment attempt not completed before "+
-				"timeout, id=%s", p.identifier.String())
+				"context timeout, id=%s", p.identifier.String())
 		} else {
 			reason = channeldb.FailureReasonCanceled
 			log.Warnf("Payment attempt context canceled, id=%s",
@@ -761,7 +772,8 @@ func (p *paymentLifecycle) amendFirstHopData(rt *route.Route) error {
 	// and apply its side effects to the UpdateAddHTLC message.
 	result, err := fn.MapOptionZ(
 		p.router.cfg.TrafficShaper,
-		func(ts TlvTrafficShaper) fn.Result[extraDataRequest] {
+		//nolint:ll
+		func(ts htlcswitch.AuxTrafficShaper) fn.Result[extraDataRequest] {
 			newAmt, newRecords, err := ts.ProduceHtlcExtraData(
 				rt.TotalAmount, p.firstHopCustomRecords,
 			)
@@ -774,7 +786,7 @@ func (p *paymentLifecycle) amendFirstHopData(rt *route.Route) error {
 				return fn.Err[extraDataRequest](err)
 			}
 
-			log.Debugf("TLV traffic shaper returned custom "+
+			log.Debugf("Aux traffic shaper returned custom "+
 				"records %v and amount %d msat for HTLC",
 				spew.Sdump(newRecords), newAmt)
 

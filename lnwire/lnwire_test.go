@@ -22,7 +22,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/tlv"
 	"github.com/lightningnetwork/lnd/tor"
@@ -592,7 +592,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				req.LeaseExpiry = new(LeaseExpiry)
 				*req.LeaseExpiry = LeaseExpiry(1337)
 
-				//nolint:lll
+				//nolint:ll
 				req.LocalNonce = someLocalNonce[NonceRecordTypeT](r)
 			} else {
 				req.UpfrontShutdownScript = []byte{}
@@ -667,7 +667,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				req.LeaseExpiry = new(LeaseExpiry)
 				*req.LeaseExpiry = LeaseExpiry(1337)
 
-				//nolint:lll
+				//nolint:ll
 				req.LocalNonce = someLocalNonce[NonceRecordTypeT](r)
 			} else {
 				req.UpfrontShutdownScript = []byte{}
@@ -749,7 +749,7 @@ func TestLightningWireProtocol(t *testing.T) {
 				scid := NewShortChanIDFromInt(uint64(r.Int63()))
 				req.AliasScid = &scid
 
-				//nolint:lll
+				//nolint:ll
 				req.NextLocalNonce = someLocalNonce[NonceRecordTypeT](r)
 			}
 
@@ -794,7 +794,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			}
 
 			if r.Int31()%2 == 0 {
-				//nolint:lll
+				//nolint:ll
 				req.ShutdownNonce = someLocalNonce[ShutdownNonceType](r)
 			}
 
@@ -994,7 +994,7 @@ func TestLightningWireProtocol(t *testing.T) {
 
 			// 50/50 chance to attach a local nonce.
 			if r.Int31()%2 == 0 {
-				//nolint:lll
+				//nolint:ll
 				req.LocalNonce = someLocalNonce[NonceRecordTypeT](r)
 			}
 
@@ -1202,7 +1202,7 @@ func TestLightningWireProtocol(t *testing.T) {
 					return
 				}
 
-				//nolint:lll
+				//nolint:ll
 				req.LocalNonce = someLocalNonce[NonceRecordTypeT](r)
 			}
 
@@ -1352,7 +1352,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			req := ClosingComplete{
 				ChannelID:   ChannelID(c),
 				FeeSatoshis: btcutil.Amount(r.Int63()),
-				Sequence:    uint32(r.Int63()),
+				LockTime:    uint32(r.Int63()),
 				ClosingSigs: ClosingSigs{},
 			}
 
@@ -1645,7 +1645,7 @@ func TestLightningWireProtocol(t *testing.T) {
 			// Alternate between the two direction possibilities.
 			if r.Int31()%2 == 0 {
 				req.SecondPeer = tlv.SomeRecordT(
-					tlv.ZeroRecordT[tlv.TlvType8, TrueBoolean](), //nolint:lll
+					tlv.ZeroRecordT[tlv.TlvType8, TrueBoolean](), //nolint:ll
 				)
 			}
 

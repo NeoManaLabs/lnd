@@ -23,7 +23,7 @@ import (
 	sphinx "github.com/lightningnetwork/lightning-onion"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/clock"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph"
 	graphdb "github.com/lightningnetwork/lnd/graph/db"
 	"github.com/lightningnetwork/lnd/graph/db/models"
@@ -170,7 +170,7 @@ func createTestCtxFromGraphInstanceAssumeValid(t *testing.T,
 		Clock:              clock.NewTestClock(time.Unix(1, 0)),
 		ApplyChannelUpdate: graphBuilder.ApplyChannelUpdate,
 		ClosedSCIDs:        mockClosedSCIDs,
-		TrafficShaper: fn.Some[TlvTrafficShaper](
+		TrafficShaper: fn.Some[htlcswitch.AuxTrafficShaper](
 			&mockTrafficShaper{},
 		),
 	})
@@ -618,7 +618,7 @@ func TestSendPaymentErrorRepeatedFeeInsufficient(t *testing.T) {
 	// We'll now modify the SendToSwitch method to return an error for the
 	// outgoing channel to Son goku. This will be a fee related error, so
 	// it should only cause the edge to be pruned after the second attempt.
-	dispatcher, ok := ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcherOld) //nolint:lll
+	dispatcher, ok := ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcherOld) //nolint:ll
 	require.True(t, ok)
 
 	dispatcher.setPaymentResult(func(firstHop lnwire.ShortChannelID) (
@@ -1300,7 +1300,7 @@ func TestUnknownErrorSource(t *testing.T) {
 	// We'll modify the SendToSwitch method so that it simulates hop b as a
 	// node that returns an unparsable failure if approached via the a->b
 	// channel.
-	dispatcher, ok := ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcherOld) //nolint:lll
+	dispatcher, ok := ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcherOld) //nolint:ll
 	require.True(t, ok)
 
 	dispatcher.setPaymentResult(func(firstHop lnwire.ShortChannelID) (
@@ -1327,7 +1327,7 @@ func TestUnknownErrorSource(t *testing.T) {
 		payment.paymentHash)
 
 	// Next we modify payment result to return an unknown failure.
-	dispatcher, ok = ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcherOld) //nolint:lll
+	dispatcher, ok = ctx.router.cfg.Payer.(*mockPaymentAttemptDispatcherOld) //nolint:ll
 	require.True(t, ok)
 
 	dispatcher.setPaymentResult(func(firstHop lnwire.ShortChannelID) (
@@ -2206,8 +2206,10 @@ func TestSendToRouteSkipTempErrSuccess(t *testing.T) {
 		NextPaymentID: func() (uint64, error) {
 			return 0, nil
 		},
-		ClosedSCIDs:   mockClosedSCIDs,
-		TrafficShaper: fn.Some[TlvTrafficShaper](&mockTrafficShaper{}),
+		ClosedSCIDs: mockClosedSCIDs,
+		TrafficShaper: fn.Some[htlcswitch.AuxTrafficShaper](
+			&mockTrafficShaper{},
+		),
 	}}
 
 	// Register mockers with the expected method calls.
@@ -2291,8 +2293,10 @@ func TestSendToRouteSkipTempErrNonMPP(t *testing.T) {
 		NextPaymentID: func() (uint64, error) {
 			return 0, nil
 		},
-		ClosedSCIDs:   mockClosedSCIDs,
-		TrafficShaper: fn.Some[TlvTrafficShaper](&mockTrafficShaper{}),
+		ClosedSCIDs: mockClosedSCIDs,
+		TrafficShaper: fn.Some[htlcswitch.AuxTrafficShaper](
+			&mockTrafficShaper{},
+		),
 	}}
 
 	// Expect an error to be returned.
@@ -2347,8 +2351,10 @@ func TestSendToRouteSkipTempErrTempFailure(t *testing.T) {
 		NextPaymentID: func() (uint64, error) {
 			return 0, nil
 		},
-		ClosedSCIDs:   mockClosedSCIDs,
-		TrafficShaper: fn.Some[TlvTrafficShaper](&mockTrafficShaper{}),
+		ClosedSCIDs: mockClosedSCIDs,
+		TrafficShaper: fn.Some[htlcswitch.AuxTrafficShaper](
+			&mockTrafficShaper{},
+		),
 	}}
 
 	// Create the error to be returned.
@@ -2431,8 +2437,10 @@ func TestSendToRouteSkipTempErrPermanentFailure(t *testing.T) {
 		NextPaymentID: func() (uint64, error) {
 			return 0, nil
 		},
-		ClosedSCIDs:   mockClosedSCIDs,
-		TrafficShaper: fn.Some[TlvTrafficShaper](&mockTrafficShaper{}),
+		ClosedSCIDs: mockClosedSCIDs,
+		TrafficShaper: fn.Some[htlcswitch.AuxTrafficShaper](
+			&mockTrafficShaper{},
+		),
 	}}
 
 	// Create the error to be returned.
@@ -2519,8 +2527,10 @@ func TestSendToRouteTempFailure(t *testing.T) {
 		NextPaymentID: func() (uint64, error) {
 			return 0, nil
 		},
-		ClosedSCIDs:   mockClosedSCIDs,
-		TrafficShaper: fn.Some[TlvTrafficShaper](&mockTrafficShaper{}),
+		ClosedSCIDs: mockClosedSCIDs,
+		TrafficShaper: fn.Some[htlcswitch.AuxTrafficShaper](
+			&mockTrafficShaper{},
+		),
 	}}
 
 	// Create the error to be returned.
@@ -2571,19 +2581,19 @@ func TestSendToRouteTempFailure(t *testing.T) {
 func TestNewRouteRequest(t *testing.T) {
 	t.Parallel()
 
-	//nolint:lll
+	//nolint:ll
 	source, err := route.NewVertexFromStr("0367cec75158a4129177bfb8b269cb586efe93d751b43800d456485e81c2620ca6")
 	require.NoError(t, err)
 	sourcePubkey, err := btcec.ParsePubKey(source[:])
 	require.NoError(t, err)
 
-	//nolint:lll
+	//nolint:ll
 	v1, err := route.NewVertexFromStr("026c43a8ac1cd8519985766e90748e1e06871dab0ff6b8af27e8c1a61640481318")
 	require.NoError(t, err)
 	pubkey1, err := btcec.ParsePubKey(v1[:])
 	require.NoError(t, err)
 
-	//nolint:lll
+	//nolint:ll
 	v2, err := route.NewVertexFromStr("03c19f0027ffbb0ae0e14a4d958788793f9d74e107462473ec0c3891e4feb12e99")
 	require.NoError(t, err)
 	pubkey2, err := btcec.ParsePubKey(v2[:])

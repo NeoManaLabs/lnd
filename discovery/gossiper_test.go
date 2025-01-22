@@ -24,7 +24,7 @@ import (
 	"github.com/lightningnetwork/lnd/batch"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph"
 	graphdb "github.com/lightningnetwork/lnd/graph/db"
 	"github.com/lightningnetwork/lnd/graph/db/models"
@@ -1461,7 +1461,7 @@ func TestSignatureAnnouncementRetryAtStartup(t *testing.T) {
 		return lnwire.ShortChannelID{}, fmt.Errorf("no peer alias")
 	}
 
-	//nolint:lll
+	//nolint:ll
 	gossiper := New(Config{
 		Notifier:               ctx.gossiper.cfg.Notifier,
 		Broadcast:              ctx.gossiper.cfg.Broadcast,
@@ -2709,7 +2709,7 @@ func assertBroadcast(t *testing.T, ctx *testCtx, num int) []lnwire.Message {
 	return msgs
 }
 
-// assertProcessAnnouncemnt is a helper method that checks that the result of
+// assertProcessAnnouncement is a helper method that checks that the result of
 // processing an announcement is successful.
 func assertProcessAnnouncement(t *testing.T, result chan error) {
 	t.Helper()

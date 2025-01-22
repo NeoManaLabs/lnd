@@ -16,7 +16,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/lightningnetwork/lnd/aliasmgr"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -289,7 +289,7 @@ func (r *ServerShell) RegisterWithRootServer(grpcServer *grpc.Server) error {
 	// all our methods are routed properly.
 	RegisterRouterServer(grpcServer, r)
 
-	log.Debugf("Router RPC server successfully register with root gRPC " +
+	log.Debugf("Router RPC server successfully registered with root gRPC " +
 		"server")
 
 	return nil
@@ -600,7 +600,7 @@ func (s *Server) probePaymentRequest(ctx context.Context, paymentRequest string,
 
 	// If the payment probe failed we only return the failure reason and
 	// leave the probe result params unaltered.
-	if resp.FailureReason != lnrpc.PaymentFailureReason_FAILURE_REASON_NONE { //nolint:lll
+	if resp.FailureReason != lnrpc.PaymentFailureReason_FAILURE_REASON_NONE { //nolint:ll
 		return resp, nil
 	}
 
@@ -786,7 +786,7 @@ func (s *Server) sendProbePayment(ctx context.Context,
 			case lnrpc.Payment_FAILED:
 				// Incorrect payment details point to a
 				// successful probe.
-				//nolint:lll
+				//nolint:ll
 				if payment.FailureReason == lnrpc.PaymentFailureReason_FAILURE_REASON_INCORRECT_PAYMENT_DETAILS {
 					return paymentDetails(payment)
 				}
@@ -1031,7 +1031,7 @@ func (s *Server) SetMissionControlConfig(ctx context.Context,
 					req.Config.HopProbability,
 				),
 				AprioriWeight:    float64(req.Config.Weight),
-				CapacityFraction: routing.DefaultCapacityFraction, //nolint:lll
+				CapacityFraction: routing.DefaultCapacityFraction, //nolint:ll
 			}
 		}
 

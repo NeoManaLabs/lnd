@@ -23,6 +23,13 @@
   cause a nil pointer dereference during the probing of a payment request that
   does not contain a payment address.
 
+* [Fixed a bug](https://github.com/lightningnetwork/lnd/pull/9324) to prevent
+  potential deadlocks when LND depends on external components (e.g. aux
+  components, hooks).
+  
+* [Make sure blinded payment failures are handled correctly in the mission
+controller](https://github.com/lightningnetwork/lnd/pull/9316).
+
 # New Features
 
 The main channel state machine and database now allow for processing and storing
@@ -84,17 +91,12 @@ types in a series of changes:
 
 ## lncli Additions
 
-* [`updatechanpolicy`](https://github.com/lightningnetwork/lnd/pull/8805) will
-  now update the channel policy if the edge was not found in the graph
-  database if the `create_missing_edge` flag is set.
 
 # Improvements
 ## Functional Updates
 ## RPC Updates
 
 ## lncli Updates
-
-
 ## Code Health
 ## Breaking Changes
 ## Performance Improvements
@@ -117,4 +119,4 @@ types in a series of changes:
 * George Tsagkarelis
 * Olaoluwa Osuntokun
 * Oliver Gugger
-
+* Ziggie

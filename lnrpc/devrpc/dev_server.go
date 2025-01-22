@@ -16,7 +16,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -134,7 +134,7 @@ func (r *ServerShell) RegisterWithRootServer(grpcServer *grpc.Server) error {
 	// all our methods are routed properly.
 	RegisterDevServer(grpcServer, r)
 
-	log.Debugf("DEV RPC server successfully register with root the " +
+	log.Debugf("DEV RPC server successfully registered with root the " +
 		"gRPC server")
 
 	return nil
@@ -298,7 +298,7 @@ func (s *Server) ImportGraph(ctx context.Context,
 				rpcEdge.ChanPoint, err)
 		}
 
-		makePolicy := func(rpcPolicy *lnrpc.RoutingPolicy) *models.ChannelEdgePolicy { //nolint:lll
+		makePolicy := func(rpcPolicy *lnrpc.RoutingPolicy) *models.ChannelEdgePolicy { //nolint:ll
 			policy := &models.ChannelEdgePolicy{
 				ChannelID: rpcEdge.ChannelId,
 				LastUpdate: time.Unix(

@@ -1275,7 +1275,11 @@ func (i *InvoiceRegistry) notifyExitHopHtlcLocked(
 			invoiceToExpire = makeInvoiceExpiry(ctx.hash, invoice)
 		}
 
-		i.hodlSubscribe(hodlChan, ctx.circuitKey)
+		// Subscribe to the resolution if the caller specified a
+		// notification channel.
+		if hodlChan != nil {
+			i.hodlSubscribe(hodlChan, ctx.circuitKey)
+		}
 
 	default:
 		panic("unknown action")
@@ -1841,7 +1845,7 @@ func (i *InvoiceRegistry) HodlUnsubscribeAll(subscriber chan<- interface{}) {
 
 // copySingleClients copies i.SingleInvoiceSubscription inside a lock. This is
 // useful when we need to iterate the map to send notifications.
-func (i *InvoiceRegistry) copySingleClients() map[uint32]*SingleInvoiceSubscription { //nolint:lll
+func (i *InvoiceRegistry) copySingleClients() map[uint32]*SingleInvoiceSubscription { //nolint:ll
 	i.notificationClientMux.RLock()
 	defer i.notificationClientMux.RUnlock()
 

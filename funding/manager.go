@@ -23,7 +23,7 @@ import (
 	"github.com/lightningnetwork/lnd/chanacceptor"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/discovery"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/input"
@@ -4028,7 +4028,7 @@ func (f *Manager) handleChannelReady(peer lnpeer.Peer, //nolint:funlen
 			channelReadyMsg.AliasScid = &alias
 
 			if firstVerNonce != nil {
-				channelReadyMsg.NextLocalNonce = lnwire.SomeMusig2Nonce( //nolint:lll
+				channelReadyMsg.NextLocalNonce = lnwire.SomeMusig2Nonce( //nolint:ll
 					firstVerNonce.PubNonce,
 				)
 			}

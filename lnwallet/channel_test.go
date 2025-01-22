@@ -25,7 +25,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/lightningnetwork/lnd/chainntnfs"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -730,9 +730,12 @@ func TestCommitHTLCSigCustomRecordSize(t *testing.T) {
 
 		// Replace the default PackSigs implementation to return a
 		// large custom records blob.
-		mockSigner.ExpectedCalls = fn.Filter(func(c *mock.Call) bool {
-			return c.Method != "PackSigs"
-		}, mockSigner.ExpectedCalls)
+		mockSigner.ExpectedCalls = fn.Filter(
+			mockSigner.ExpectedCalls,
+			func(c *mock.Call) bool {
+				return c.Method != "PackSigs"
+			},
+		)
 		mockSigner.On("PackSigs", mock.Anything).
 			Return(fn.Ok(fn.Some(largeBlob)))
 	})
@@ -767,29 +770,66 @@ func TestCommitHTLCSigCustomRecordSize(t *testing.T) {
 }
 
 // TestCooperativeChannelClosure checks that the coop close process finishes
-// with an agreement from both parties, and that the final balances of the
-// close tx check out.
+// with an agreement from both parties, and that the final balances of the close
+// tx check out.
 func TestCooperativeChannelClosure(t *testing.T) {
-	t.Run("tweakless", func(t *testing.T) {
-		testCoopClose(t, &coopCloseTestCase{
-			chanType: channeldb.SingleFunderTweaklessBit,
+	testCases := []struct {
+		name      string
+		closeCase coopCloseTestCase
+	}{
+		{
+			name: "tweakless",
+			closeCase: coopCloseTestCase{
+				chanType: channeldb.SingleFunderTweaklessBit,
+			},
+		},
+		{
+			name: "anchors",
+			closeCase: coopCloseTestCase{
+				chanType: channeldb.SingleFunderTweaklessBit |
+					channeldb.AnchorOutputsBit,
+				anchorAmt: AnchorSize * 2,
+			},
+		},
+		{
+			name: "anchors local pay",
+			closeCase: coopCloseTestCase{
+				chanType: channeldb.SingleFunderTweaklessBit |
+					channeldb.AnchorOutputsBit,
+				anchorAmt:   AnchorSize * 2,
+				customPayer: fn.Some(lntypes.Local),
+			},
+		},
+		{
+			name: "anchors remote pay",
+			closeCase: coopCloseTestCase{
+				chanType: channeldb.SingleFunderTweaklessBit |
+					channeldb.AnchorOutputsBit,
+				anchorAmt:   AnchorSize * 2,
+				customPayer: fn.Some(lntypes.Remote),
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCoopClose(t, testCase.closeCase)
 		})
-	})
-	t.Run("anchors", func(t *testing.T) {
-		testCoopClose(t, &coopCloseTestCase{
-			chanType: channeldb.SingleFunderTweaklessBit |
-				channeldb.AnchorOutputsBit,
-			anchorAmt: AnchorSize * 2,
-		})
-	})
+	}
 }
 
 type coopCloseTestCase struct {
 	chanType  channeldb.ChannelType
 	anchorAmt btcutil.Amount
+
+	customPayer fn.Option[lntypes.ChannelParty]
 }
 
-func testCoopClose(t *testing.T, testCase *coopCloseTestCase) {
+type closeOpts struct {
+	aliceOpts []ChanCloseOpt
+	bobOpts   []ChanCloseOpt
+}
+
+func testCoopClose(t *testing.T, testCase coopCloseTestCase) {
 	t.Parallel()
 
 	// Create a test channel which will be used for the duration of this
@@ -810,17 +850,38 @@ func testCoopClose(t *testing.T, testCase *coopCloseTestCase) {
 		bobChannel.channelState.LocalCommitment.FeePerKw,
 	)
 
+	customPayer := testCase.customPayer
+
+	closeOpts := fn.MapOptionZ(
+		customPayer, func(payer lntypes.ChannelParty) closeOpts {
+			// If the local party is paying then from Alice's PoV,
+			// then local party is paying. From Bob's PoV, the
+			// remote party is paying. If the remote party is, then
+			// the opposite is true.
+			return closeOpts{
+				aliceOpts: []ChanCloseOpt{
+					WithCustomPayer(payer),
+				},
+				bobOpts: []ChanCloseOpt{
+					WithCustomPayer(payer.CounterParty()),
+				},
+			}
+		},
+	)
+
 	// We'll start with both Alice and Bob creating a new close proposal
 	// with the same fee.
 	aliceFee := aliceChannel.CalcFee(aliceFeeRate)
 	aliceSig, _, _, err := aliceChannel.CreateCloseProposal(
 		aliceFee, aliceDeliveryScript, bobDeliveryScript,
+		closeOpts.aliceOpts...,
 	)
 	require.NoError(t, err, "unable to create alice coop close proposal")
 
 	bobFee := bobChannel.CalcFee(bobFeeRate)
 	bobSig, _, _, err := bobChannel.CreateCloseProposal(
 		bobFee, bobDeliveryScript, aliceDeliveryScript,
+		closeOpts.bobOpts...,
 	)
 	require.NoError(t, err, "unable to create bob coop close proposal")
 
@@ -829,14 +890,14 @@ func testCoopClose(t *testing.T, testCase *coopCloseTestCase) {
 	// transaction is well formed, and the signatures verify.
 	aliceCloseTx, bobTxBalance, err := bobChannel.CompleteCooperativeClose(
 		bobSig, aliceSig, bobDeliveryScript, aliceDeliveryScript,
-		bobFee,
+		bobFee, closeOpts.bobOpts...,
 	)
 	require.NoError(t, err, "unable to complete alice cooperative close")
 	bobCloseSha := aliceCloseTx.TxHash()
 
 	bobCloseTx, aliceTxBalance, err := aliceChannel.CompleteCooperativeClose(
 		aliceSig, bobSig, aliceDeliveryScript, bobDeliveryScript,
-		aliceFee,
+		aliceFee, closeOpts.aliceOpts...,
 	)
 	require.NoError(t, err, "unable to complete bob cooperative close")
 	aliceCloseSha := bobCloseTx.TxHash()
@@ -845,18 +906,43 @@ func testCoopClose(t *testing.T, testCase *coopCloseTestCase) {
 		t.Fatalf("alice and bob close transactions don't match: %v", err)
 	}
 
-	// Finally, make sure the final balances are correct from both's
-	// perspective.
+	type chanFees struct {
+		alice btcutil.Amount
+		bob   btcutil.Amount
+	}
+
+	// Compute the closing fees for each party. If not specified, Alice will
+	// always pay the fees. Otherwise, it depends on who the payer is.
+	closeFees := fn.MapOption(func(payer lntypes.ChannelParty) chanFees {
+		var alice, bob btcutil.Amount
+
+		switch payer {
+		case lntypes.Local:
+			alice = bobFee
+			bob = 0
+		case lntypes.Remote:
+			bob = bobFee
+			alice = 0
+		}
+
+		return chanFees{
+			alice: alice,
+			bob:   bob,
+		}
+	})(testCase.customPayer).UnwrapOr(chanFees{alice: bobFee})
+
+	// Finally, make sure the final balances are correct from both
+	// perspectives.
 	aliceBalance := aliceChannel.channelState.LocalCommitment.
 		LocalBalance.ToSatoshis()
 
-	// The commit balance have had the initiator's (Alice) commitfee and
+	// The commit balance have had the initiator's (Alice) commit fee and
 	// any anchors subtracted, so add that back to the final expected
 	// balance. Alice also pays the coop close fee, so that must be
 	// subtracted.
 	commitFee := aliceChannel.channelState.LocalCommitment.CommitFee
 	expBalanceAlice := aliceBalance + commitFee +
-		testCase.anchorAmt - bobFee
+		testCase.anchorAmt - closeFees.alice
 	if aliceTxBalance != expBalanceAlice {
 		t.Fatalf("expected balance %v got %v", expBalanceAlice,
 			aliceTxBalance)
@@ -865,7 +951,7 @@ func testCoopClose(t *testing.T, testCase *coopCloseTestCase) {
 	// Bob is not the initiator, so his final balance should simply be
 	// equal to the latest commitment balance.
 	expBalanceBob := bobChannel.channelState.LocalCommitment.
-		LocalBalance.ToSatoshis()
+		LocalBalance.ToSatoshis() - closeFees.bob
 	if bobTxBalance != expBalanceBob {
 		t.Fatalf("expected bob's balance to be %v got %v",
 			expBalanceBob, bobTxBalance)
@@ -9829,7 +9915,7 @@ func TestCreateBreachRetribution(t *testing.T) {
 		{
 			name: "fail due to our index too big",
 			revocationLog: &channeldb.RevocationLog{
-				//nolint:lll
+				//nolint:ll
 				OurOutputIndex: tlv.NewPrimitiveRecord[tlv.TlvType0](
 					uint16(htlcIndex + 1),
 				),
@@ -9839,7 +9925,7 @@ func TestCreateBreachRetribution(t *testing.T) {
 		{
 			name: "fail due to their index too big",
 			revocationLog: &channeldb.RevocationLog{
-				//nolint:lll
+				//nolint:ll
 				TheirOutputIndex: tlv.NewPrimitiveRecord[tlv.TlvType1](
 					uint16(htlcIndex + 1),
 				),
@@ -10352,7 +10438,7 @@ func TestApplyCommitmentFee(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			//nolint:lll
+			//nolint:ll
 			balance, bufferAmt, commitFee, err := tc.channel.applyCommitFee(
 				tc.balance, commitWeight, feePerKw, tc.buffer,
 			)
@@ -10832,7 +10918,7 @@ func TestBlindingPointPersistence(t *testing.T) {
 	// Send a HTLC from Alice to Bob that has a blinding point populated.
 	htlc, _ := createHTLC(0, 100_000_000)
 	blinding, err := pubkeyFromHex(
-		"0228f2af0abe322403480fb3ee172f7f1601e67d1da6cad40b54c4468d48236c39", //nolint:lll
+		"0228f2af0abe322403480fb3ee172f7f1601e67d1da6cad40b54c4468d48236c39", //nolint:ll
 	)
 	require.NoError(t, err)
 	htlc.BlindingPoint = tlv.SomeRecordT(

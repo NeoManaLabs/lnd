@@ -60,7 +60,7 @@
 * [Make the contract resolutions for the channel arbitrator optional](
   https://github.com/lightningnetwork/lnd/pull/9253)
 
-  * [Fixed a bug](https://github.com/lightningnetwork/lnd/pull/9322) that caused
+* [Fixed a bug](https://github.com/lightningnetwork/lnd/pull/9322) that caused
     estimateroutefee to ignore the default payment timeout.
 
 # New Features
@@ -80,7 +80,7 @@
 ## RPC Additions
 
 * [Add a new rpc endpoint](https://github.com/lightningnetwork/lnd/pull/8843)
-  `BumpForceCloseFee` which moves the functionality soley available in the
+  `BumpForceCloseFee` which moves the functionality solely available in the
   `lncli` to LND hence making it more universal.
 
 * [The `walletrpc.FundPsbt` RPC method now has an option to specify the fee as
@@ -89,6 +89,10 @@
 
 * [The `walletrpc.FundPsbt` method now has a new option to specify the maximum
   fee to output amounts ratio.](https://github.com/lightningnetwork/lnd/pull/8600)
+
+* When returning the response from list invoices RPC, the `lnrpc.Invoice.Htlcs`
+  are now [sorted](https://github.com/lightningnetwork/lnd/pull/9337) based on
+  the `InvoiceHTLC.HtlcIndex`.
 
 ## lncli Additions
 
@@ -103,6 +107,16 @@
 * The `lncli wallet fundpsbt` command now has a [`--max_fee_ratio` argument to
   specify the max fees to output amounts ratio.](https://github.com/lightningnetwork/lnd/pull/8600)
 
+* [`updatechanpolicy`](https://github.com/lightningnetwork/lnd/pull/8805) will
+  now update the channel policy if the edge was not found in the graph
+  database if the `create_missing_edge` flag is set.
+
+* [Enhance](https://github.com/lightningnetwork/lnd/pull/9390) the
+  `lncli listchannels` output by adding the human readable short
+  channel id and the channel id defined in BOLT02. Moreover change
+  the misnomer of `chan_id` which was describing the short channel
+  id to `scid` to represent what it really is.
+
 # Improvements
 ## Functional Updates
 
@@ -115,6 +129,22 @@
   around.
 
 * LND updates channel.backup file at shutdown time.
+
+* A new subsystem `chainio` is
+  [introduced](https://github.com/lightningnetwork/lnd/pull/9315) to make sure
+  the subsystems are in sync with their current best block. Previously, when
+  resolving a force close channel, the sweeping of HTLCs may be delayed for one
+  or two blocks due to block heights not in sync in the relevant subsystems
+  (`ChainArbitrator`, `UtxoSweeper` and `TxPublisher`), causing a slight
+  inaccuracy when deciding the sweeping feerate and urgency. With `chainio`,
+  this is now fixed as these subsystems now share the same view on the best
+  block. Check
+  [here](https://github.com/lightningnetwork/lnd/blob/master/chainio/README.md)
+  to learn more.
+  
+* [The sweeper](https://github.com/lightningnetwork/lnd/pull/9274) does now also
+ use the configured budget values for HTLCs (first level sweep) in parcticular
+ `--sweeper.budget.deadlinehtlcratio` and `--sweeper.budget.deadlinehtlc`.
 
 ## RPC Updates
 
@@ -163,7 +193,13 @@
   a log line. The options for this include "off" (default), "short" (source file
   name and line number) and "long" (full path to source file and line number). 
   Finally, the new `--logging.console.style` option can be used under the `dev` 
-  build tag to add styling to console logging.
+  build tag to add styling to console logging. 
+
+* [Start adding a commit hash fingerprint to log lines by 
+  default](https://github.com/lightningnetwork/lnd/pull/9314). This can be 
+  disabled with the new `--logging.no-commit-hash"` option. Note that this extra
+  info will currently only appear in a few log lines, but more will be added in 
+  future as the structured logging change is propagated throughout LND.
  
 * [Add max files and max file size](https://github.com/lightningnetwork/lnd/pull/9233) 
   options to the `logging` config namespace under new `--logging.file.max-files` 
@@ -190,6 +226,15 @@ The underlying functionality between those two options remain the same.
   for the Gossip 1.75 protocol.
 
 ## Testing
+
+* LND [uses](https://github.com/lightningnetwork/lnd/pull/9257) the feerate
+  estimator provided by bitcoind or btcd in regtest and simnet modes instead of
+  static fee estimator if feeurl is not provided.
+
+* The integration tests CI have been optimized to run faster and all flakes are
+  now documented and
+  [fixed](https://github.com/lightningnetwork/lnd/pull/9368).
+
 ## Database
 
 * [Migrate the mission control 
@@ -201,11 +246,24 @@ The underlying functionality between those two options remain the same.
   store](https://github.com/lightningnetwork/lnd/pull/9001) so that results are 
   namespaced. All existing results are written to the "default" namespace.
 
+* [Remove global application level lock for
+  Postgres](https://github.com/lightningnetwork/lnd/pull/9242) so multiple DB
+  transactions can run at once, increasing efficiency. Includes several bugfixes
+  to allow this to work properly.
+
 ## Code Health
 
 * A code refactor that [moves all the graph related DB code out of the 
   `channeldb` package](https://github.com/lightningnetwork/lnd/pull/9236) and 
   into the `graph/db` package.
+ 
+* [Improve the API](https://github.com/lightningnetwork/lnd/pull/9341) of the 
+  [GoroutineManager](https://github.com/lightningnetwork/lnd/pull/9141) so that 
+  its constructor does not take a context.
+
+* [Update protofsm 
+ StateMachine](https://github.com/lightningnetwork/lnd/pull/9342) to use the 
+  new GoroutineManager API along with structured logging.
 
 ## Tooling and Documentation
 
@@ -220,6 +278,7 @@ The underlying functionality between those two options remain the same.
 # Contributors (Alphabetical Order)
 
 * Abdullahi Yunus
+* Alex Akselrod
 * Animesh Bilthare
 * Boris Nagaev
 * Carla Kirk-Cohen
@@ -227,7 +286,9 @@ The underlying functionality between those two options remain the same.
 * Elle Mouton
 * George Tsagkarelis
 * hieblmi
+* Jesse de Wit
 * Keagan McClelland
+* Nishant Bansal
 * Oliver Gugger
 * Pins
 * Viktor Tigerström

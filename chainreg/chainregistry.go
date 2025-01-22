@@ -23,7 +23,7 @@ import (
 	"github.com/lightningnetwork/lnd/chainntnfs/btcdnotify"
 	"github.com/lightningnetwork/lnd/chainntnfs/neutrinonotify"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/keychain"
@@ -222,7 +222,7 @@ type ChainControl struct {
 // the parts that can be purely constructed from the passed in global
 // configuration and doesn't need any wallet instance yet.
 //
-//nolint:lll
+//nolint:ll
 func NewPartialChainControl(cfg *Config) (*PartialChainControl, func(), error) {
 	cc := &PartialChainControl{
 		Cfg: cfg,
@@ -385,8 +385,7 @@ func NewPartialChainControl(cfg *Config) (*PartialChainControl, func(), error) {
 		)
 		cc.ChainSource = bitcoindConn.NewBitcoindClient()
 
-		// If we're not in regtest mode, then we'll attempt to use a
-		// proper fee estimator for testnet.
+		// Initialize config to connect to bitcoind RPC.
 		rpcConfig := &rpcclient.ConnConfig{
 			Host:                 bitcoindHost,
 			User:                 bitcoindMode.RPCUser,
@@ -396,7 +395,9 @@ func NewPartialChainControl(cfg *Config) (*PartialChainControl, func(), error) {
 			DisableTLS:           true,
 			HTTPPostMode:         true,
 		}
-		if !cfg.Bitcoin.RegTest {
+
+		// If feeurl is not provided, use bitcoind's fee estimator.
+		if cfg.Fee.URL == "" {
 			log.Infof("Initializing bitcoind backed fee estimator "+
 				"in %s mode", bitcoindMode.EstimateMode)
 
@@ -660,9 +661,8 @@ func NewPartialChainControl(cfg *Config) (*PartialChainControl, func(), error) {
 			return checkOutboundPeers(chainRPC.Client)
 		}
 
-		// If we're not in simnet or regtest mode, then we'll attempt
-		// to use a proper fee estimator for testnet.
-		if !cfg.Bitcoin.SimNet && !cfg.Bitcoin.RegTest {
+		// If feeurl is not provided, use btcd's fee estimator.
+		if cfg.Fee.URL == "" {
 			log.Info("Initializing btcd backed fee estimator")
 
 			// Finally, we'll re-initialize the fee estimator, as

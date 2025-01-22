@@ -3,7 +3,7 @@ package routerrpc
 import (
 	"errors"
 
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -154,7 +154,7 @@ func (r *forwardInterceptor) resolveFromClient(
 			outWireCustomRecords = fn.Some[lnwire.CustomRecords](cr)
 		}
 
-		//nolint:lll
+		//nolint:ll
 		return r.htlcSwitch.Resolve(&htlcswitch.FwdResolution{
 			Key:                  circuitKey,
 			Action:               htlcswitch.FwdActionResumeModified,

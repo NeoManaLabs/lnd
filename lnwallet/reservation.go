@@ -12,7 +12,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/lightningnetwork/lnd/channeldb"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/input"
 	"github.com/lightningnetwork/lnd/keychain"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -895,7 +895,7 @@ func (r *ChannelReservation) ChanState() *channeldb.OpenChannel {
 // CommitmentKeyRings returns the local+remote key ring used for the very first
 // commitment transaction both parties.
 //
-//nolint:lll
+//nolint:ll
 func (r *ChannelReservation) CommitmentKeyRings() lntypes.Dual[CommitmentKeyRing] {
 	r.RLock()
 	defer r.RUnlock()

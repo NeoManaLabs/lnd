@@ -19,7 +19,7 @@ import (
 	"github.com/lightningnetwork/lnd/amp"
 	"github.com/lightningnetwork/lnd/channeldb"
 	"github.com/lightningnetwork/lnd/clock"
-	"github.com/lightningnetwork/lnd/fn"
+	"github.com/lightningnetwork/lnd/fn/v2"
 	"github.com/lightningnetwork/lnd/graph/db/models"
 	"github.com/lightningnetwork/lnd/htlcswitch"
 	"github.com/lightningnetwork/lnd/lntypes"
@@ -157,7 +157,7 @@ type PaymentSessionSource interface {
 	// finding a path to the payment's destination.
 	NewPaymentSession(p *LightningPayment,
 		firstHopBlob fn.Option[tlv.Blob],
-		trafficShaper fn.Option[TlvTrafficShaper]) (PaymentSession,
+		ts fn.Option[htlcswitch.AuxTrafficShaper]) (PaymentSession,
 		error)
 
 	// NewPaymentSessionEmpty creates a new paymentSession instance that is
@@ -297,7 +297,7 @@ type Config struct {
 
 	// TrafficShaper is an optional traffic shaper that can be used to
 	// control the outgoing channel of a payment.
-	TrafficShaper fn.Option[TlvTrafficShaper]
+	TrafficShaper fn.Option[htlcswitch.AuxTrafficShaper]
 }
 
 // EdgeLocator is a struct used to identify a specific edge.
@@ -1874,7 +1874,7 @@ func outgoingFromIncoming(incomingAmt lnwire.MilliSatoshi,
 	PPM := big.NewInt(1_000_000)
 
 	// The following discussion was contributed by user feelancer21, see
-	//nolint:lll
+	//nolint:ll
 	// https://github.com/feelancer21/lnd/commit/f6f05fa930985aac0d27c3f6681aada1b599162a.
 
 	// The incoming amount Ai based on the outgoing amount Ao is computed by
