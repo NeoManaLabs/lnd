@@ -52,4 +52,4 @@ RUN sha256sum /bin/lnd /bin/lncli > /shasums.txt \
 EXPOSE 9735 10009
 
 # Specify the start command and entrypoint as the lnd daemon.
-ENTRYPOINT ["lnd", "--bitcoin.active", "--bitcoin.testnet", "--bitcoin.node=bitcoind", "--bitcoind.rpcuser=user", "--bitcoind.rpcpass=password", "--bitcoind.zmqpubrawblock=tcp://127.0.0.1:28332", "--bitcoind.zmqpubrawtx=tcp://127.0.0.1:28333"]
+ENTRYPOINT ["lnd", "--bitcoin.testnet", "--bitcoin.node=bitcoind", "--bitcoind.rpcuser=user", "--bitcoind.rpcpass=password", "--bitcoind.zmqpubrawblock='tcp://$BITCOIND_HOST:28332'", "--bitcoind.zmqpubrawtx='tcp://$BITCOIND_HOST:28333'"]
