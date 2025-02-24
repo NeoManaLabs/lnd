@@ -1,6 +1,6 @@
 # If you change this please also update GO_VERSION in Makefile (then run
 # `make lint` to see where else it needs to be updated as well).
-FROM public.ecr.aws/docker/library/golang:1.22.6-alpine as builder
+FROM public.ecr.aws/docker/library/golang:1.23.6-alpine as builder
 
 # Force Go to use the cgo based DNS resolver. This is required to ensure DNS
 # queries required to connect to linked containers succeed.
